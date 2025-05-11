@@ -39,12 +39,6 @@ public class OrderFactory {
             throw new WarningException("Orders JSON root must be an array");
         }
 
-        for (JsonNode node : root) {
-            if (!node.has("promotions")) {
-                throw new WarningException("Missing 'promotions' field in one or more orders");
-            }
-        }
-
         List<Order> orders = new ArrayList<>();
         for (JsonNode node : root) {
             if (!node.hasNonNull("id") || !node.hasNonNull("value")) {
@@ -63,7 +57,7 @@ public class OrderFactory {
 
             List<String> promotions = new ArrayList<>();
             JsonNode promos = node.get("promotions");
-            if (promos.isArray()) {
+            if (promos != null && promos.isArray()) {
                 for (JsonNode p : promos) {
                     if (p.isTextual()) {
                         promotions.add(p.asText());
@@ -71,7 +65,7 @@ public class OrderFactory {
                         logger.warning("Ignoring non-text promotion for order '" + id + "': " + p);
                     }
                 }
-            } else {
+            } else if (promos != null) {
                 logger.warning("Field 'promotions' is not an array for order '" + id + "': " + promos);
             }
 

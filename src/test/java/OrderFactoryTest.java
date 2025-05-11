@@ -72,16 +72,6 @@ class OrderFactoryTest {
     }
 
     @Test
-    void testMissingPromotionsFieldThrowsWarningException() throws IOException {
-        String json = "[{ \"id\": \"1\", \"value\": \"10\" }]";
-        Path file = tempDir.resolve("missing_promotions.json");
-        Files.writeString(file, json);
-
-        WarningException ex = assertThrows(WarningException.class, () -> OrderFactory.fromJson(file));
-        assertEquals("Missing 'promotions' field in one or more orders", ex.getMessage());
-    }
-
-    @Test
     void testSkipEntriesWithMissingIdOrValue() throws Exception {
         String json = "["
                 + "{ \"id\": null, \"value\": \"50\", \"promotions\": [] },"
