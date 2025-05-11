@@ -1,4 +1,7 @@
-package pl.edu.agh;
+package pl.edu.agh.algorithm;
+
+import pl.edu.agh.model.Order;
+import pl.edu.agh.model.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;

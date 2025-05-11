@@ -1,11 +1,11 @@
-package pl.edu.agh;
+package pl.edu.agh.algorithm;
+
+import pl.edu.agh.model.Order;
+import pl.edu.agh.model.PaymentMethod;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class GreedyPaymentOptimizer {
 
@@ -20,41 +20,39 @@ public class GreedyPaymentOptimizer {
             if (order.getPromotions() != null) {
                 for (String promoId : order.getPromotions()) {
                     PaymentMethod card = findMethodById(methods, promoId);
-                    if (card != null) {
-                        BigDecimal rate = card.getDiscount().divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
-                        BigDecimal profit = value.multiply(rate).setScale(2, RoundingMode.HALF_UP);
-                        BigDecimal cost = value.subtract(profit).setScale(2, RoundingMode.HALF_UP);
-                        options.add(new AssignmentOption(order, card, AssignmentOption.Type.CARD, profit, cost));
-                    }
+                    BigDecimal rate = card.getDiscount()
+                            .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                    BigDecimal profit = value.multiply(rate)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal cost = value.subtract(profit)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    options.add(new AssignmentOption(order, card,
+                            AssignmentOption.Type.CARD, profit, cost));
                 }
             }
-
-            BigDecimal thresholdPct = BigDecimal.valueOf(0.10);
-            BigDecimal fullPct       = BigDecimal.valueOf(1.00);
-            BigDecimal thresholdCost = value.multiply(thresholdPct).setScale(2, RoundingMode.HALF_UP);
-
-            BigDecimal p = thresholdPct;
-            while (p.compareTo(fullPct) < 0) {
-                BigDecimal cost = value.multiply(p).setScale(2, RoundingMode.HALF_UP);
-                if (cost.compareTo(BigDecimal.ZERO) > 0) {
+            if (pointsMethod != null) {
+                BigDecimal thresholdPct = BigDecimal.valueOf(0.10);
+                BigDecimal fullPct = BigDecimal.valueOf(1.00);
+                BigDecimal p = thresholdPct;
+                while (p.compareTo(fullPct) < 0) {
+                    BigDecimal cost = value.multiply(p)
+                            .setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal profit = value.multiply(thresholdPct)
+                            .setScale(2, RoundingMode.HALF_UP);
                     options.add(new AssignmentOption(order, pointsMethod,
-                            AssignmentOption.Type.PARTIAL_POINTS,
-                            thresholdCost,
-                            cost));
+                            AssignmentOption.Type.PARTIAL_POINTS, profit, cost));
+                    p = p.add(thresholdPct);
                 }
-                p = p.add(thresholdPct);
+                BigDecimal pointsRate = pointsMethod.getDiscount()
+                        .divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
+                BigDecimal fullProfit = value.multiply(pointsRate)
+                        .setScale(2, RoundingMode.HALF_UP);
+                BigDecimal fullCost = value.subtract(fullProfit)
+                        .setScale(2, RoundingMode.HALF_UP);
+                options.add(new AssignmentOption(order, pointsMethod,
+                        AssignmentOption.Type.FULL_POINTS, fullProfit, fullCost));
             }
-
-            BigDecimal pointsRate = pointsMethod.getDiscount().divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP);
-            BigDecimal fullProfit = value.multiply(pointsRate).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal fullCost   = value.subtract(fullProfit).setScale(2, RoundingMode.HALF_UP);
-            options.add(new AssignmentOption(order, pointsMethod,
-                    AssignmentOption.Type.FULL_POINTS,
-                    fullProfit,
-                    fullCost));
         }
-
-
         options.sort((a, b) -> b.getProfitDensity().compareTo(a.getProfitDensity()));
 
         Map<String, AssignmentOption> chosen = new HashMap<>();
@@ -85,9 +83,7 @@ public class GreedyPaymentOptimizer {
             }
         }
 
-        if (pointsMethod != null) {
-            distributePayments(orders, remaining, pointsMethod);
-        }
+        if (pointsMethod != null) distributePayments(orders, remaining, pointsMethod);
         for (PaymentMethod pm : methods) {
             if ("PUNKTY".equals(pm.getId())) continue;
             distributePayments(orders, remaining, pm);
@@ -102,16 +98,20 @@ public class GreedyPaymentOptimizer {
         for (Order o : orders) {
             BigDecimal toPay = rem.get(o.getId());
             if (toPay.compareTo(BigDecimal.ZERO) <= 0) continue;
-            if (method.getRemaining().compareTo(BigDecimal.ZERO) <= 0) break;
-            BigDecimal use = toPay.min(method.getRemaining());
+            BigDecimal available = method.getRemaining();
+            if (available.compareTo(BigDecimal.ZERO) <= 0) break;
+            BigDecimal use = toPay.min(available);
             method.useAmount(use);
             rem.put(o.getId(), toPay.subtract(use));
         }
     }
 
     private PaymentMethod findMethodById(List<PaymentMethod> methods, String id) {
-        return methods.stream()
-                .filter(m -> m.getId().equals(id))
-                .findFirst().orElse(null);
+        for (PaymentMethod m : methods) {
+            if (m.getId().equals(id)) {
+                return m;
+            }
+        }
+        throw new IllegalArgumentException("Payment method not found: " + id);
     }
 }
