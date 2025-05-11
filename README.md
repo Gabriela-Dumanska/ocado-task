@@ -1,6 +1,6 @@
 # Payment Optimizer 🚀
 
-**Stażowy projekt rekrutacyjny do Ocado**
+**Stażowy projekt rekrutacyjny do Ocado by Gabriela Dumańska**
 
 ---
 
